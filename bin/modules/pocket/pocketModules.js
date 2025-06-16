@@ -158,6 +158,17 @@ module.exports.addMemberToPocket = async ({
 
 module.exports.updatePocket = async (pocketId, userId, updateData) => {
   try {
+    // cek apa role dari userId di pocket ini
+    const member = await PocketMember.findOne({
+      where: {
+        pocket_id: pocketId,
+        user_id: userId,
+      }
+    })
+    if(!member || member.role !== "owner" && member.role !== "admin"){
+      throw new ForbiddenError("You do not have permission to update this pocket");
+    }
+
     const pocket = await Pocket.findOne({
       where: { id: pocketId, owner_user_id: userId },
     });
@@ -174,8 +185,21 @@ module.exports.updatePocket = async (pocketId, userId, updateData) => {
   }
 };
 
-module.exports.deletePocket = async (pocketId) => {
+module.exports.deletePocket = async (userId, pocketId) => {
   try {
+    // Cek apakah userId merupakan anggota dari pocket
+    const isMember = await PocketMember.findOne({
+      where: {
+        pocket_id: pocketId,
+        user_id: userId,
+      },
+    });
+    if (!isMember || isMember.role !== "owner" && isMember.role !== "admin") {
+      throw new ForbiddenError("You do not have permission to delete this pocket");
+    }
+
+    // Normalya minta persetujuan dari owner dan admin sebelum menghapus pocket
+
     const pocket = await Pocket.findByPk(pocketId);
     if (!pocket) {
       throw new NotFoundError("Pocket not found");
